@@ -109,14 +109,24 @@ def mark_dark_particles_adaptive(image_input, sensitivity=0.2, output_path='outp
         result_img = Image.fromarray(result_array)
 
     # 在最终图像上绘制选框（如果提供）
+    draw = ImageDraw.Draw(result_img)
     if selection_box:
-        draw = ImageDraw.Draw(result_img)
         draw.rectangle(selection_box, outline="blue", width=2)
 
     # 计算百分比
     particle_area = np.sum(mask)
     total_area = mask.size
     percentage = (particle_area / total_area) * 100 if total_area > 0 else 0
+
+    # 在图片上用蓝色笔迹刻印粒子所占面积
+    text = f"Particle Area: {percentage:.2f}%"
+    # 简单的定位逻辑：如果选框存在，则放在选框内，否则放在左上角
+    if selection_box:
+        text_position = (selection_box[0] + 5, selection_box[1] + 5)
+    else:
+        text_position = (15, 15)
+    text_color = (0, 0, 255)  # 蓝色
+    draw.text(text_position, text, fill=text_color)
 
     # 保存结果
     result_img.save(output_path)

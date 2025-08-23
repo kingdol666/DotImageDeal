@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QLabel, QPushButton,
                              QVBoxLayout, QWidget, QFileDialog, QHBoxLayout,
                              QSlider, QDoubleSpinBox, QFrame, QRubberBand,
                              QProgressDialog, QLineEdit)
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtGui import QPixmap, QIcon
 from PyQt6.QtCore import Qt, QRect, QPoint, QSize, pyqtSignal
 from PIL import Image, ImageDraw
 from PIL.ImageQt import ImageQt
@@ -73,8 +73,9 @@ class ImageSelectionLabel(ScaledPixmapLabel):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Dark Particle Analyzer")
+        self.setWindowTitle("Dark Particle Analyzer - 深色粒子分析器")
         self.setGeometry(100, 100, 1200, 700)
+        self.setWindowIcon(QIcon("public\images\icon.svg"))
 
         self.original_image_label = ImageSelectionLabel()
         self.original_image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -294,7 +295,7 @@ class MainWindow(QMainWindow):
                     output_path=output_path,
                     blur_radius=blur_radius,
                     border_width=border_width,
-                    selection_box=None,  # Process the whole image
+                    selection_box=self.last_selection_box,  # 使用当前选择的区域
                     min_particle_size=min_size,
                     max_particle_size=max_size
                 )
@@ -367,6 +368,8 @@ class MainWindow(QMainWindow):
             self.last_selection_box = (left, top, right, bottom)
         
         if not self.last_selection_box:
+            # Even if there's no selection, we should still update the parameters
+            # so that batch processing uses the latest values.
             return
 
         sensitivity = self.sensitivity_spinbox.value()
