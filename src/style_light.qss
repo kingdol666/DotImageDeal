@@ -1,0 +1,112 @@
+/* General Window Styling */
+QMainWindow {
+    background-color: #f0f0f0; /* Light gray background */
+}
+
+QWidget {
+    color: #333333; /* Dark gray text */
+    font-family: "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
+    font-size: 10pt;
+}
+
+/* Labels */
+QLabel {
+    color: #333333; /* Standard text color */
+    font-weight: bold;
+}
+
+/* Result Label */
+#resultLabel {
+    color: #005a9e; /* Dark blue text */
+    background-color: rgba(0, 120, 215, 0.1); /* Semi-transparent light blue */
+    border: 1px solid #0078d7;
+    border-radius: 5px;
+    padding: 10px;
+    font-size: 12pt;
+    font-weight: bold;
+    margin: 5px 0;
+}
+
+/* Tooltip Styling */
+QToolTip {
+    background-color: #ffffff;
+    color: #333333;
+    border: 1px solid #cccccc;
+    padding: 5px;
+    border-radius: 3px;
+}
+
+/* Buttons */
+QPushButton {
+    background-color: #e1e1e1;
+    border: 1px solid #cccccc;
+    padding: 8px 16px;
+    border-radius: 5px;
+}
+
+QPushButton:hover {
+    background-color: #d1d1d1;
+    border: 1px solid #0078d7;
+}
+
+QPushButton:pressed {
+    background-color: #c1c1c1;
+}
+
+/* Line Edits and Spin Boxes */
+QLineEdit, QDoubleSpinBox {
+    background-color: #ffffff;
+    border: 1px solid #cccccc;
+    border-radius: 5px;
+    padding: 5px;
+    color: #333333;
+}
+
+QLineEdit:focus, QDoubleSpinBox:focus {
+    border: 1px solid #0078d7; /* Highlight color on focus */
+}
+
+QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
+    subcontrol-origin: border;
+    width: 16px;
+    border-left: 1px solid #cccccc;
+    border-radius: 3px;
+}
+
+QDoubleSpinBox::up-arrow, QDoubleSpinBox::down-arrow {
+    width: 10px;
+    height: 10px;
+}
+
+/* Sliders */
+QSlider::groove:horizontal {
+    border: 1px solid #cccccc;
+    height: 8px;
+    background: #e1e1e1;
+    margin: 2px 0;
+    border-radius: 4px;
+}
+
+QSlider::handle:horizontal {
+    background: #0078d7; /* Blue handle */
+    border: 1px solid #0078d7;
+    width: 18px;
+    margin: -5px 0; 
+    border-radius: 9px;
+}
+
+/* Image Panels */
+ScaledPixmapLabel, ImageSelectionLabel {
+    background-color: #ffffff;
+    border: 1px dashed #cccccc;
+    border-radius: 5px;
+}
+
+/* Progress Dialog */
+QProgressDialog {
+    background-color: #f0f0f0;
+}
+
+QProgressDialog QLabel {
+    color: #333333;
+}
