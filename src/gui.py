@@ -239,9 +239,9 @@ class MainWindow(QMainWindow):
 
     def load_themes(self):
         try:
-            with open('src/style.qss', 'r') as f:
+            with open('src/style/style.qss', 'r') as f:
                 self.dark_style = f.read()
-            with open('src/style_light.qss', 'r') as f:
+            with open('src/style/style_light.qss', 'r') as f:
                 self.light_style = f.read()
         except FileNotFoundError as e:
             print(f"Error loading stylesheet: {e}. Make sure style.qss and style_light.qss are in the src directory.")
