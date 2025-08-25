@@ -1,6 +1,12 @@
 /* General Window Styling */
 QMainWindow {
-    background-color: #282c34; /* Dark gray background */
+    background-color: transparent; /* Make window transparent */
+}
+
+/* This is the main container for the content area */
+#contentContainer {
+    background-color: rgba(40, 44, 52, 0.85); /* Semi-transparent dark background */
+    border-radius: 10px;
 }
 
 QWidget {
@@ -9,10 +15,34 @@ QWidget {
     font-size: 10pt;
 }
 
+/* --- Custom Title Bar --- */
+#titleBar {
+    background-color: transparent;
+}
+#titleLabel {
+    color: #abb2bf;
+    font-weight: bold;
+    font-size: 11pt;
+}
+#controlButton, #closeButton {
+    background-color: transparent;
+    border: none;
+    font-size: 12pt;
+    font-weight: bold;
+}
+#controlButton:hover {
+    background-color: rgba(97, 175, 239, 0.3);
+}
+#closeButton:hover {
+    background-color: rgba(255, 0, 0, 0.7);
+}
+
+
 /* Labels */
 QLabel {
     color: #abb2bf; /* Standard text color */
     font-weight: bold;
+    background-color: transparent; /* Ensure labels are transparent */
 }
 
 /* Result Label */
@@ -93,6 +123,20 @@ QSlider::handle:horizontal {
     width: 18px;
     margin: -5px 0; 
     border-radius: 9px;
+}
+
+/* Group Boxes */
+QGroupBox {
+    background-color: rgba(33, 37, 43, 0.5);
+    border: 1px solid #4b5263;
+    border-radius: 5px;
+    margin-top: 1ex; /* leave space at the top for the title */
+    font-weight: bold;
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 0 5px;
 }
 
 /* Image Panels */

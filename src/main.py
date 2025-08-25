@@ -58,6 +58,7 @@ def mark_dark_particles_adaptive(image_input, sensitivity=0.2, output_path='outp
     
     # 创建初始掩码
     initial_mask = gray_array < threshold
+    num_particles = 0
 
     # 过滤粒子大小
     if min_particle_size > 0 or max_particle_size is not None:
@@ -68,8 +69,6 @@ def mark_dark_particles_adaptive(image_input, sensitivity=0.2, output_path='outp
         particle_sizes = np.bincount(labeled_array.ravel())
         
         # 创建一个大小筛选掩码
-        # 我们想要移除那些太小或太大的粒子
-        # 首先，创建一个布尔数组，其中 particle_sizes 中符合条件的索引为 True
         size_mask = np.ones_like(particle_sizes, dtype=bool)
         size_mask[0] = False # 忽略背景
         if min_particle_size > 0:
@@ -77,17 +76,19 @@ def mark_dark_particles_adaptive(image_input, sensitivity=0.2, output_path='outp
         if max_particle_size is not None:
             size_mask[particle_sizes > max_particle_size] = False
             
+        # 计算符合条件的粒子数量
+        num_particles = np.sum(size_mask)
+        
         # 从 labeled_array 中移除不符合条件的粒子
-        # 获取所有不符合条件的粒子标签
         remove_labels = np.where(~size_mask)[0]
         
-        # 创建最终掩码，只保留符合条件的粒子
-        # np.isin 检查 labeled_array 中的每个元素是否存在于 remove_labels 中
-        # 我们对结果取反，以保留 *不* 在 remove_labels 中的粒子
+        # 创建最终掩码
         final_mask = ~np.isin(labeled_array, remove_labels)
         mask = final_mask
     else:
         mask = initial_mask
+        # 如果不过滤大小，也计算粒子总数
+        _, num_particles = label(mask)
 
     # 在处理区域内忽略边框
     if border_width > 0:
@@ -118,27 +119,34 @@ def mark_dark_particles_adaptive(image_input, sensitivity=0.2, output_path='outp
     total_area = mask.size
     percentage = (particle_area / total_area) * 100 if total_area > 0 else 0
 
-    # 在图片上用蓝色笔迹刻印粒子所占面积
-    text = f"Particle Area: {percentage:.2f}%"
-    # 简单的定位逻辑：如果选框存在，则放在选框内，否则放在左上角
+    # 在图片上用蓝色笔迹刻印粒子信息
+    text_percentage = f"Particle Area: {percentage:.2f}%"
+    text_count = f"Particle Count: {num_particles}"
+    
+    # 简单的定位逻辑
     if selection_box:
-        text_position = (selection_box[0] + 5, selection_box[1] + 5)
+        text_pos1 = (selection_box[0] + 5, selection_box[1] + 5)
+        text_pos2 = (selection_box[0] + 5, selection_box[1] + 20)
     else:
-        text_position = (15, 15)
+        text_pos1 = (15, 15)
+        text_pos2 = (15, 30)
+        
     text_color = (0, 0, 255)  # 蓝色
-    draw.text(text_position, text, fill=text_color)
+    draw.text(text_pos1, text_percentage, fill=text_color)
+    draw.text(text_pos2, text_count, fill=text_color)
 
     # 保存结果
     result_img.save(output_path)
     print(f"处理完成，结果已保存至 {output_path}")
     print(f"参数: 灵敏度={sensitivity}, 模糊半径={blur_radius}, 边框宽度={border_width}")
     print(f"深色粒子覆盖面积: {percentage:.2f}%")
-    return result_img, percentage
+    print(f"检测到的粒子数量: {num_particles}")
+    return result_img, percentage, num_particles
 
 # --- 示例调用 ---
 if __name__ == '__main__':
     try:
-        _, _ = mark_dark_particles_adaptive(
+        _, _, _ = mark_dark_particles_adaptive(
             image_input='images/12.png',
             sensitivity=0.2,
             output_path='output/marked_adaptive_corrected.png',

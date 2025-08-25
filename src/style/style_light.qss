@@ -1,6 +1,12 @@
 /* General Window Styling */
 QMainWindow {
-    background-color: #f0f0f0; /* Light gray background */
+    background-color: transparent; /* Make window transparent */
+}
+
+/* This is the main container for the content area */
+#contentContainer {
+    background-color: rgba(240, 240, 240, 0.85); /* Semi-transparent light background */
+    border-radius: 10px;
 }
 
 QWidget {
@@ -9,10 +15,35 @@ QWidget {
     font-size: 10pt;
 }
 
+/* --- Custom Title Bar --- */
+#titleBar {
+    background-color: transparent;
+}
+#titleLabel {
+    color: #333333;
+    font-weight: bold;
+    font-size: 11pt;
+}
+#controlButton, #closeButton {
+    background-color: transparent;
+    border: none;
+    font-size: 12pt;
+    font-weight: bold;
+    color: #333333;
+}
+#controlButton:hover {
+    background-color: rgba(0, 120, 215, 0.3);
+}
+#closeButton:hover {
+    background-color: rgba(255, 0, 0, 0.7);
+    color: white;
+}
+
 /* Labels */
 QLabel {
     color: #333333; /* Standard text color */
     font-weight: bold;
+    background-color: transparent; /* Ensure labels are transparent */
 }
 
 /* Result Label */
@@ -95,9 +126,23 @@ QSlider::handle:horizontal {
     border-radius: 9px;
 }
 
+/* Group Boxes */
+QGroupBox {
+    background-color: rgba(255, 255, 255, 0.5);
+    border: 1px solid #cccccc;
+    border-radius: 5px;
+    margin-top: 1ex; /* leave space at the top for the title */
+    font-weight: bold;
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 0 5px;
+}
+
 /* Image Panels */
 ScaledPixmapLabel, ImageSelectionLabel {
-    background-color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.7);
     border: 1px dashed #cccccc;
     border-radius: 5px;
 }
