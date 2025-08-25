@@ -1,10 +1,9 @@
 /* General Window Styling */
 QMainWindow {
-    background-color: transparent; /* Make window transparent */
+    border-image: url(public/images/background.png) 0 0 0 0 stretch stretch;
 }
 
-/* This is the main container for the content area */
-#contentContainer {
+#centralWidget {
     background-color: rgba(240, 240, 240, 0.85); /* Semi-transparent light background */
     border-radius: 10px;
 }
@@ -13,37 +12,29 @@ QWidget {
     color: #333333; /* Dark gray text */
     font-family: "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
     font-size: 10pt;
-}
-
-/* --- Custom Title Bar --- */
-#titleBar {
-    background-color: transparent;
-}
-#titleLabel {
-    color: #333333;
-    font-weight: bold;
-    font-size: 11pt;
-}
-#controlButton, #closeButton {
-    background-color: transparent;
-    border: none;
-    font-size: 12pt;
-    font-weight: bold;
-    color: #333333;
-}
-#controlButton:hover {
-    background-color: rgba(0, 120, 215, 0.3);
-}
-#closeButton:hover {
-    background-color: rgba(255, 0, 0, 0.7);
-    color: white;
+    background-color: transparent; /* Make widgets transparent by default */
 }
 
 /* Labels */
 QLabel {
     color: #333333; /* Standard text color */
     font-weight: bold;
-    background-color: transparent; /* Ensure labels are transparent */
+}
+
+/* Group Boxes */
+QGroupBox {
+    background-color: rgba(225, 225, 225, 0.5); /* Glassy background */
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    margin-top: 10px;
+    padding: 10px;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 0 5px;
+    color: #0078d7;
 }
 
 /* Result Label */
@@ -51,7 +42,7 @@ QLabel {
     color: #005a9e; /* Dark blue text */
     background-color: rgba(0, 120, 215, 0.1); /* Semi-transparent light blue */
     border: 1px solid #0078d7;
-    border-radius: 5px;
+    border-radius: 8px; /* Increased border-radius */
     padding: 10px;
     font-size: 12pt;
     font-weight: bold;
@@ -69,10 +60,10 @@ QToolTip {
 
 /* Buttons */
 QPushButton {
-    background-color: #e1e1e1;
+    background-color: rgba(225, 225, 225, 0.8);
     border: 1px solid #cccccc;
     padding: 8px 16px;
-    border-radius: 5px;
+    border-radius: 8px; /* Increased border-radius */
 }
 
 QPushButton:hover {
@@ -86,9 +77,9 @@ QPushButton:pressed {
 
 /* Line Edits and Spin Boxes */
 QLineEdit, QDoubleSpinBox {
-    background-color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.8);
     border: 1px solid #cccccc;
-    border-radius: 5px;
+    border-radius: 8px; /* Increased border-radius */
     padding: 5px;
     color: #333333;
 }
@@ -126,25 +117,11 @@ QSlider::handle:horizontal {
     border-radius: 9px;
 }
 
-/* Group Boxes */
-QGroupBox {
-    background-color: rgba(255, 255, 255, 0.5);
-    border: 1px solid #cccccc;
-    border-radius: 5px;
-    margin-top: 1ex; /* leave space at the top for the title */
-    font-weight: bold;
-}
-QGroupBox::title {
-    subcontrol-origin: margin;
-    subcontrol-position: top left;
-    padding: 0 5px;
-}
-
 /* Image Panels */
 ScaledPixmapLabel, ImageSelectionLabel {
-    background-color: rgba(255, 255, 255, 0.7);
+    background-color: rgba(255, 255, 255, 0.5);
     border: 1px dashed #cccccc;
-    border-radius: 5px;
+    border-radius: 8px; /* Increased border-radius */
 }
 
 /* Progress Dialog */

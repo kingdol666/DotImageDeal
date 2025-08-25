@@ -3,23 +3,12 @@ import os
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QLabel, QPushButton,
                              QVBoxLayout, QWidget, QFileDialog, QHBoxLayout,
                              QSlider, QDoubleSpinBox, QFrame, QRubberBand,
-                             QProgressDialog, QLineEdit, QGroupBox, QGridLayout, QSizePolicy)
-from PyQt6.QtGui import QPixmap, QIcon, QPainter
+                             QProgressDialog, QLineEdit, QGroupBox, QGridLayout, QSizePolicy, QMessageBox, QDialog, QScrollArea)
+from PyQt6.QtGui import QPixmap, QIcon
 from PyQt6.QtCore import Qt, QRect, QPoint, QSize, pyqtSignal
 from PIL import Image, ImageDraw
 from PIL.ImageQt import ImageQt
 from main import mark_dark_particles_adaptive
-
-if sys.platform == "win32":
-    import ctypes
-    from ctypes import wintypes
-
-    # Constants for DWM API
-    DWMWA_USE_IMMERSIVE_DARK_MODE = 20
-    DWMWA_SYSTEMBACKDROP_TYPE = 38
-    DWMSBT_MAINWINDOW = 2  # Mica
-    DWMSBT_TRANSIENTWINDOW = 3  # Acrylic
-    DWMSBT_TABBEDWINDOW = 4 # Tabbed Mica
 
 class ScaledPixmapLabel(QLabel):
     """A QLabel that automatically scales its pixmap while preserving aspect ratio."""
@@ -88,15 +77,6 @@ class MainWindow(QMainWindow):
         self.setGeometry(100, 100, 1200, 700)
         self.setWindowIcon(QIcon("public\images\icon.svg"))
 
-        # --- Frameless Window Setup ---
-        self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.gripSize = 8
-        self.grips = []
-
-        # --- Custom Title Bar ---
-        self.title_bar = self._create_title_bar()
-
         self.original_image_label = ImageSelectionLabel()
         self.original_image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.original_image_label.setFrameShape(QFrame.Shape.StyledPanel)
@@ -124,23 +104,39 @@ class MainWindow(QMainWindow):
 
         self.theme_button = QPushButton(" Toggle Theme")
         self.theme_button.clicked.connect(self.toggle_theme)
+
+        self.help_button = QPushButton(" Help")
+        self.help_button.clicked.connect(self.show_help)
         
         # Parameters Group
         params_group = QGroupBox("Processing Parameters")
         params_layout = QGridLayout(params_group)
 
-        self.sensitivity_label = QLabel("Sensitivity:")
-        self.sensitivity_label.setToolTip("识别灵敏度 (0.0 ~ 1.0)。\n数值越高，识别标准越宽松，标记的粒子越多。")
-        self.sensitivity_slider = QSlider(Qt.Orientation.Horizontal)
-        self.sensitivity_slider.setRange(0, 100)
-        self.sensitivity_slider.setValue(70)
-        self.sensitivity_spinbox = QDoubleSpinBox()
-        self.sensitivity_spinbox.setRange(0.0, 1.0)
-        self.sensitivity_spinbox.setSingleStep(0.01)
-        self.sensitivity_spinbox.setValue(0.7)
-        self.sensitivity_slider.valueChanged.connect(lambda val: self.sensitivity_spinbox.setValue(val / 100.0))
-        self.sensitivity_spinbox.valueChanged.connect(lambda val: self.sensitivity_slider.setValue(int(val * 100)))
-        self.sensitivity_spinbox.valueChanged.connect(self.process_image)
+        self.sensitivity_min_label = QLabel("Sensitivity Min:")
+        self.sensitivity_min_label.setToolTip("识别灵敏度下限 (0.0 ~ 1.0)。")
+        self.sensitivity_min_slider = QSlider(Qt.Orientation.Horizontal)
+        self.sensitivity_min_slider.setRange(0, 100)
+        self.sensitivity_min_slider.setValue(20)
+        self.sensitivity_min_spinbox = QDoubleSpinBox()
+        self.sensitivity_min_spinbox.setRange(0.0, 1.0)
+        self.sensitivity_min_spinbox.setSingleStep(0.01)
+        self.sensitivity_min_spinbox.setValue(0.2)
+        self.sensitivity_min_slider.valueChanged.connect(lambda val: self.sensitivity_min_spinbox.setValue(val / 100.0))
+        self.sensitivity_min_spinbox.valueChanged.connect(lambda val: self.sensitivity_min_slider.setValue(int(val * 100)))
+        self.sensitivity_min_spinbox.valueChanged.connect(self.process_image)
+
+        self.sensitivity_max_label = QLabel("Sensitivity Max:")
+        self.sensitivity_max_label.setToolTip("识别灵敏度上限 (0.0 ~ 1.0)。")
+        self.sensitivity_max_slider = QSlider(Qt.Orientation.Horizontal)
+        self.sensitivity_max_slider.setRange(0, 100)
+        self.sensitivity_max_slider.setValue(90)
+        self.sensitivity_max_spinbox = QDoubleSpinBox()
+        self.sensitivity_max_spinbox.setRange(0.0, 1.0)
+        self.sensitivity_max_spinbox.setSingleStep(0.01)
+        self.sensitivity_max_spinbox.setValue(0.9)
+        self.sensitivity_max_slider.valueChanged.connect(lambda val: self.sensitivity_max_spinbox.setValue(val / 100.0))
+        self.sensitivity_max_spinbox.valueChanged.connect(lambda val: self.sensitivity_max_slider.setValue(int(val * 100)))
+        self.sensitivity_max_spinbox.valueChanged.connect(self.process_image)
 
         self.blur_label = QLabel("Blur Radius:")
         self.blur_label.setToolTip("用于计算局部背景亮度的模糊半径。\n该值应大于要识别的最大粒子的半径。")
@@ -168,15 +164,18 @@ class MainWindow(QMainWindow):
         self.border_spinbox.valueChanged.connect(lambda val: self.border_slider.setValue(int(val)))
         self.border_spinbox.valueChanged.connect(self.process_image)
 
-        params_layout.addWidget(self.sensitivity_label, 0, 0)
-        params_layout.addWidget(self.sensitivity_slider, 0, 1)
-        params_layout.addWidget(self.sensitivity_spinbox, 0, 2)
-        params_layout.addWidget(self.blur_label, 1, 0)
-        params_layout.addWidget(self.blur_slider, 1, 1)
-        params_layout.addWidget(self.blur_spinbox, 1, 2)
-        params_layout.addWidget(self.border_label, 2, 0)
-        params_layout.addWidget(self.border_slider, 2, 1)
-        params_layout.addWidget(self.border_spinbox, 2, 2)
+        params_layout.addWidget(self.sensitivity_min_label, 0, 0)
+        params_layout.addWidget(self.sensitivity_min_slider, 0, 1)
+        params_layout.addWidget(self.sensitivity_min_spinbox, 0, 2)
+        params_layout.addWidget(self.sensitivity_max_label, 1, 0)
+        params_layout.addWidget(self.sensitivity_max_slider, 1, 1)
+        params_layout.addWidget(self.sensitivity_max_spinbox, 1, 2)
+        params_layout.addWidget(self.blur_label, 2, 0)
+        params_layout.addWidget(self.blur_slider, 2, 1)
+        params_layout.addWidget(self.blur_spinbox, 2, 2)
+        params_layout.addWidget(self.border_label, 3, 0)
+        params_layout.addWidget(self.border_slider, 3, 1)
+        params_layout.addWidget(self.border_spinbox, 3, 2)
 
         # Particle Size Parameters
         size_params_group = QGroupBox("Particle Size Filter")
@@ -229,24 +228,15 @@ class MainWindow(QMainWindow):
 
         # Layouts
         central_widget = QWidget()
+        central_widget.setObjectName("centralWidget") # 设置对象名
         main_layout = QVBoxLayout(central_widget)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(0)
-        
-        main_layout.addWidget(self.title_bar)
-
-        # Wrap main content in a container for styling and margins
-        content_container = QWidget()
-        content_container.setObjectName("contentContainer")
-        main_layout.addWidget(content_container, 1)
-        content_layout = QVBoxLayout(content_container)
-        content_layout.setContentsMargins(10, 10, 10, 10) # Add some padding
         
         top_controls_layout = QHBoxLayout()
         top_controls_layout.addWidget(self.load_button)
         top_controls_layout.addWidget(self.save_button)
         top_controls_layout.addWidget(self.clear_button)
         top_controls_layout.addStretch()
+        top_controls_layout.addWidget(self.help_button)
         top_controls_layout.addWidget(self.theme_button)
 
         image_layout = QHBoxLayout()
@@ -261,11 +251,11 @@ class MainWindow(QMainWindow):
         bottom_controls_layout.addWidget(params_group, 1)
         bottom_controls_layout.addWidget(size_params_group, 1)
 
-        content_layout.addLayout(top_controls_layout)
-        content_layout.addLayout(image_layout)
-        content_layout.addWidget(self.result_label)
-        content_layout.addLayout(bottom_controls_layout)
-        content_layout.addWidget(batch_group)
+        main_layout.addLayout(top_controls_layout)
+        main_layout.addLayout(image_layout)
+        main_layout.addWidget(self.result_label)
+        main_layout.addLayout(bottom_controls_layout)
+        main_layout.addWidget(batch_group)
         
         self.setCentralWidget(central_widget)
 
@@ -277,120 +267,8 @@ class MainWindow(QMainWindow):
         self.is_dark_theme = True
         self.dark_style = ""
         self.light_style = ""
-        self.background_pixmap = QPixmap("public/images/background.png") # Load background
         self.load_themes()
         self.toggle_theme() # Apply initial theme
-        self._apply_blur_effect()
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        if not self.background_pixmap.isNull():
-            # Scale the pixmap to cover the entire window, cropping if necessary
-            scaled_pixmap = self.background_pixmap.scaled(self.size(), 
-                                                          Qt.AspectRatioMode.KeepAspectRatioByExpanding, 
-                                                          Qt.TransformationMode.SmoothTransformation)
-            # Center the pixmap
-            x = (self.width() - scaled_pixmap.width()) / 2
-            y = (self.height() - scaled_pixmap.height()) / 2
-            painter.drawPixmap(int(x), int(y), scaled_pixmap)
-
-    def _apply_blur_effect(self):
-        if not sys.platform == "win32":
-            return
-
-        hwnd = int(self.winId())
-        if not hwnd:
-            return
-
-        # Use ctypes to call DwmSetWindowAttribute
-        dwmapi = ctypes.windll.dwmapi
-        
-        # Define the function signature
-        dwmapi.DwmSetWindowAttribute.argtypes = [wintypes.HWND, wintypes.DWORD, ctypes.c_void_p, wintypes.DWORD]
-        dwmapi.DwmSetWindowAttribute.restype = wintypes.LONG # Use LONG instead of HRESULT
-
-        # Set backdrop type to Mica
-        backdrop_type = DWMSBT_MAINWINDOW
-        dwmapi.DwmSetWindowAttribute(
-            hwnd,
-            DWMWA_SYSTEMBACKDROP_TYPE,
-            ctypes.byref(ctypes.c_int(backdrop_type)),
-            ctypes.sizeof(ctypes.c_int)
-        )
-
-        # Set dark/light mode for title bar and border
-        is_dark = 1 if self.is_dark_theme else 0
-        dwmapi.DwmSetWindowAttribute(
-            hwnd,
-            DWMWA_USE_IMMERSIVE_DARK_MODE,
-            ctypes.byref(ctypes.c_int(is_dark)),
-            ctypes.sizeof(ctypes.c_int)
-        )
-
-    def _create_title_bar(self):
-        title_bar = QWidget()
-        title_bar.setObjectName("titleBar")
-        title_bar_layout = QHBoxLayout(title_bar)
-        title_bar_layout.setContentsMargins(5, 0, 0, 0)
-        title_bar_layout.setSpacing(0)
-
-        # Icon and Title
-        icon_label = QLabel()
-        icon_pixmap = QPixmap("public/images/icon.svg")
-        icon_label.setPixmap(icon_pixmap.scaled(24, 24, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-        title_label = QLabel(" Dark Particle Analyzer")
-        title_label.setObjectName("titleLabel")
-
-        title_bar_layout.addWidget(icon_label)
-        title_bar_layout.addWidget(title_label)
-        title_bar_layout.addStretch()
-
-        # Window control buttons
-        self.minimize_button = QPushButton("—")
-        self.maximize_button = QPushButton("🗖")
-        self.close_button = QPushButton("✕")
-
-        self.minimize_button.setObjectName("controlButton")
-        self.maximize_button.setObjectName("controlButton")
-        self.close_button.setObjectName("closeButton")
-
-        self.minimize_button.clicked.connect(self.showMinimized)
-        self.maximize_button.clicked.connect(self._toggle_maximize)
-        self.close_button.clicked.connect(self.close)
-
-        for btn in [self.minimize_button, self.maximize_button, self.close_button]:
-            btn.setFixedSize(40, 30)
-            title_bar_layout.addWidget(btn)
-
-        # Mouse move tracking
-        self._is_moving = False
-        self._start_pos = QPoint()
-        title_bar.mousePressEvent = self._title_bar_press
-        title_bar.mouseMoveEvent = self._title_bar_move
-        title_bar.mouseReleaseEvent = self._title_bar_release
-
-        return title_bar
-
-    def _toggle_maximize(self):
-        if self.isMaximized():
-            self.showNormal()
-        else:
-            self.showMaximized()
-
-    def _title_bar_press(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            self._is_moving = True
-            self._start_pos = event.globalPosition().toPoint() - self.pos()
-            event.accept()
-
-    def _title_bar_move(self, event):
-        if self._is_moving:
-            self.move(event.globalPosition().toPoint() - self._start_pos)
-            event.accept()
-
-    def _title_bar_release(self, event):
-        self._is_moving = False
-        event.accept()
 
     def load_themes(self):
         try:
@@ -407,7 +285,6 @@ class MainWindow(QMainWindow):
         else:
             QApplication.instance().setStyleSheet(self.dark_style)
         self.is_dark_theme = not self.is_dark_theme
-        self._apply_blur_effect() # Re-apply to update dark/light mode
 
     def select_output_directory(self):
         output_dir = QFileDialog.getExistingDirectory(self, "Select Output Directory", self.output_dir_line_edit.text())
@@ -424,7 +301,8 @@ class MainWindow(QMainWindow):
             self.result_label.setText("Error: Invalid or no output directory selected.")
             return
 
-        sensitivity = self.sensitivity_spinbox.value()
+        sensitivity_min = self.sensitivity_min_spinbox.value()
+        sensitivity_max = self.sensitivity_max_spinbox.value()
         blur_radius = int(self.blur_spinbox.value())
         border_width = int(self.border_spinbox.value())
         min_size = int(self.min_size_spinbox.value())
@@ -447,7 +325,8 @@ class MainWindow(QMainWindow):
             try:
                 mark_dark_particles_adaptive(
                     image_input=file_path,
-                    sensitivity=sensitivity,
+                    sensitivity_min=sensitivity_min,
+                    sensitivity_max=sensitivity_max,
                     output_path=output_path,
                     blur_radius=blur_radius,
                     border_width=border_width,
@@ -539,7 +418,8 @@ class MainWindow(QMainWindow):
             # so that batch processing uses the latest values.
             return
 
-        sensitivity = self.sensitivity_spinbox.value()
+        sensitivity_min = self.sensitivity_min_spinbox.value()
+        sensitivity_max = self.sensitivity_max_spinbox.value()
         blur_radius = int(self.blur_spinbox.value())
         border_width = int(self.border_spinbox.value())
         min_size = int(self.min_size_spinbox.value())
@@ -547,7 +427,8 @@ class MainWindow(QMainWindow):
 
         result_img, percentage, num_particles = mark_dark_particles_adaptive(
             image_input=self.pil_image.copy(),
-            sensitivity=sensitivity,
+            sensitivity_min=sensitivity_min,
+            sensitivity_max=sensitivity_max,
             output_path='output/gui_marked_result.png',
             blur_radius=blur_radius,
             border_width=border_width,
@@ -569,6 +450,67 @@ class MainWindow(QMainWindow):
         self.original_image_label.setPixmap(self.pil_to_pixmap(original_with_box))
         self.processed_image_label.setPixmap(self.pil_to_pixmap(result_img))
         self.result_label.setText(f"Particle Percentage: {percentage:.2f}%  |  Particle Count: {num_particles}")
+
+    def show_help(self):
+        try:
+            with open('README.md', 'r', encoding='utf-8') as f:
+                help_text = f.read()
+
+            # Create a custom dialog for scrollable content
+            dialog = QDialog(self)
+            dialog.setWindowTitle("Help - 使用说明")
+            dialog.setMinimumSize(800, 600)
+
+            # Scroll Area
+            scroll_area = QScrollArea(dialog)
+            scroll_area.setWidgetResizable(True)
+
+            # Content Label
+            help_label = QLabel(help_text, dialog)
+            help_label.setTextFormat(Qt.TextFormat.MarkdownText)
+            help_label.setWordWrap(True)
+            help_label.setOpenExternalLinks(True)
+            help_label.setContentsMargins(10, 10, 10, 10) # Add some padding
+
+            scroll_area.setWidget(help_label)
+
+            # Dialog Layout
+            layout = QVBoxLayout(dialog)
+            layout.addWidget(scroll_area)
+            dialog.setLayout(layout)
+
+            # Apply a light theme stylesheet specifically for the help dialog
+            dialog.setStyleSheet("""
+                QDialog {
+                    background-color: #f0f0f0;
+                }
+                QLabel {
+                    color: #333;
+                    background-color: #ffffff;
+                }
+                QScrollArea {
+                    border: none;
+                }
+                QScrollBar:vertical {
+                    border: 1px solid #cccccc;
+                    background: #f0f0f0;
+                    width: 15px;
+                    margin: 0px 0px 0px 0px;
+                }
+                QScrollBar::handle:vertical {
+                    background: #cccccc;
+                    min-height: 20px;
+                    border-radius: 7px;
+                }
+                QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                    height: 0px;
+                }
+            """)
+            
+            dialog.exec()
+
+        except FileNotFoundError:
+            QMessageBox.warning(self, "Error", "Could not find the help file (README.md).")
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
