@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QLabel, QPushButton,
                              QVBoxLayout, QWidget, QFileDialog, QHBoxLayout,
                              QSlider, QDoubleSpinBox, QFrame, QRubberBand,
                              QProgressDialog, QLineEdit, QGroupBox, QGridLayout, QSizePolicy, QMessageBox, QDialog, QScrollArea, QStyle, QSplitter)
-from PyQt6.QtGui import QPixmap, QIcon
+from PyQt6.QtGui import QPixmap, QIcon, QFont, QFont
 from PyQt6.QtCore import Qt, QRect, QPoint, QSize, pyqtSignal
 from PIL import Image, ImageDraw
 from PIL.ImageQt import ImageQt
@@ -139,7 +139,7 @@ class MainWindow(QMainWindow):
         """
         super().__init__()
         self.setWindowTitle("Dark Particle Analyzer - 深色粒子分析器")
-        self.setGeometry(100, 100, 1200, 700)
+        self.setGeometry(100, 100, 1600, 700)
         self.setWindowIcon(QIcon("public\images\icon.svg"))
 
         # 初始化图像显示区域
@@ -339,8 +339,30 @@ class MainWindow(QMainWindow):
         self.result_label.setObjectName("resultLabel")
         self.result_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
+        # --- Footer ---
+        footer_layout = QHBoxLayout()
+        footer_layout.setContentsMargins(10, 0, 10, 5)
+        
+        logo_label = QLabel()
+        logo_label.setPixmap(QPixmap("public/images/logo.svg").scaled(96, 48, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+
+        logo_label.setObjectName("footerLogo")
+
+        email_label = QLabel("作者邮箱: zhanghaozheng@mail.ustc.edu.cn")
+        email_label.setObjectName("footerLabel")
+        email_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # 设置字体为楷体并加粗
+        font = QFont("楷体", 10, QFont.Weight.Bold)
+        email_label.setFont(font)
+        
+        footer_layout.addWidget(logo_label)
+        footer_layout.addStretch(1)
+        footer_layout.addWidget(email_label)
+        footer_layout.addStretch(1)
+
         image_layout.addLayout(image_panels_layout)
         image_layout.addWidget(self.result_label)
+        image_layout.addLayout(footer_layout)
 
         # 右侧：控制面板
         control_panel = QWidget()

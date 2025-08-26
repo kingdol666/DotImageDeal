@@ -155,3 +155,10 @@ QSplitter::handle:horizontal {
     height: 10px;
     margin: 1px 0;
 }
+
+/* Footer */
+#footerLabel {
+    font-size: 9pt;
+    color: #555;
+    font-weight: normal;
+}
