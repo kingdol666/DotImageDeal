@@ -2,3 +2,5 @@ Pillow
 numpy
 scipy
 PyQt6
+scikit-learn
+matplotlib

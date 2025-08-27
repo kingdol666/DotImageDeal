@@ -55,6 +55,15 @@ QGroupBox::title {
     margin: 5px 0;
 }
 
+#workspaceTitle {
+    color: #61afef;
+    font-size: 14pt;
+    font-weight: bold;
+    padding: 5px 0;
+    margin-bottom: 5px;
+    border-bottom: 2px solid #61afef;
+}
+
 /* Tooltip Styling */
 QToolTip {
     background-color: #21252b;
@@ -66,11 +75,12 @@ QToolTip {
 
 /* Buttons */
 QPushButton {
-    background-color: rgba(50, 55, 68, 0.8); /* Semi-transparent dark blue-gray */
-    border: 1px solid #4b5263;
+    background-color: rgba(255, 255, 255, 0.1); /* Frosted glass effect */
+    border: 1px solid rgba(255, 255, 255, 0.2);
     padding: 8px 12px;
-    border-radius: 8px; /* Increased border-radius */
+    border-radius: 8px;
     text-align: center;
+    color: #dcdfe4; /* Brighter text for better contrast */
 }
 
 #iconButton {
@@ -79,12 +89,12 @@ QPushButton {
 }
 
 QPushButton:hover {
-    background-color: rgba(75, 83, 100, 0.9); /* Lighter on hover */
-    border: 1px solid #61afef;
+    background-color: rgba(255, 255, 255, 0.2); /* Brighter on hover */
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 QPushButton:pressed {
-    background-color: rgba(40, 44, 52, 0.9); /* Darker when pressed */
+    background-color: rgba(255, 255, 255, 0.05); /* Darker when pressed */
 }
 
 /* Line Edits and Spin Boxes */
@@ -127,6 +137,47 @@ QSlider::handle:horizontal {
     width: 18px;
     margin: -5px 0; 
     border-radius: 9px;
+}
+
+/* ComboBox */
+QComboBox {
+    background-color: rgba(33, 37, 43, 0.8);
+    border: 1px solid #4b5263;
+    border-radius: 8px;
+    padding: 5px 10px;
+    color: #dcdfe4;
+    min-height: 2em; /* Ensure height matches other inputs */
+}
+
+QComboBox:hover {
+    border: 1px solid #61afef;
+}
+
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 20px;
+    border-left-width: 1px;
+    border-left-color: #4b5263;
+    border-left-style: solid;
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+QComboBox::down-arrow {
+    /* Using a unicode character as a fallback */
+    /* A proper SVG or icon font would be ideal */
+    width: 12px;
+    height: 12px;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #21252b;
+    border: 1px solid #61afef;
+    border-radius: 8px;
+    selection-background-color: #61afef;
+    color: #dcdfe4;
+    padding: 5px;
 }
 
 /* Image Panels */

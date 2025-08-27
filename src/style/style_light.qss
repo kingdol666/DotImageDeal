@@ -55,6 +55,15 @@ QGroupBox::title {
     margin: 5px 0;
 }
 
+#workspaceTitle {
+    color: #0078d7;
+    font-size: 14pt;
+    font-weight: bold;
+    padding: 5px 0;
+    margin-bottom: 5px;
+    border-bottom: 2px solid #0078d7;
+}
+
 /* Tooltip Styling */
 QToolTip {
     background-color: #ffffff;
@@ -66,11 +75,12 @@ QToolTip {
 
 /* Buttons */
 QPushButton {
-    background-color: rgba(225, 225, 225, 0.8);
-    border: 1px solid #cccccc;
+    background-color: rgba(255, 255, 255, 0.4); /* Frosted glass effect */
+    border: 1px solid rgba(0, 0, 0, 0.1);
     padding: 8px 12px;
-    border-radius: 8px; /* Increased border-radius */
+    border-radius: 8px;
     text-align: center;
+    color: #333333;
 }
 
 #iconButton {
@@ -79,12 +89,12 @@ QPushButton {
 }
 
 QPushButton:hover {
-    background-color: #d1d1d1;
-    border: 1px solid #0078d7;
+    background-color: rgba(255, 255, 255, 0.6); /* Brighter on hover */
+    border: 1px solid rgba(0, 0, 0, 0.2);
 }
 
 QPushButton:pressed {
-    background-color: #c1c1c1;
+    background-color: rgba(255, 255, 255, 0.2); /* Darker when pressed */
 }
 
 /* Line Edits and Spin Boxes */
@@ -127,6 +137,45 @@ QSlider::handle:horizontal {
     width: 18px;
     margin: -5px 0; 
     border-radius: 9px;
+}
+
+/* ComboBox */
+QComboBox {
+    background-color: rgba(255, 255, 255, 0.8);
+    border: 1px solid #cccccc;
+    border-radius: 8px;
+    padding: 5px 10px;
+    color: #333333;
+    min-height: 2em;
+}
+
+QComboBox:hover {
+    border: 1px solid #0078d7;
+}
+
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 20px;
+    border-left-width: 1px;
+    border-left-color: #cccccc;
+    border-left-style: solid;
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+QComboBox::down-arrow {
+    width: 12px;
+    height: 12px;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #ffffff;
+    border: 1px solid #0078d7;
+    border-radius: 8px;
+    selection-background-color: #0078d7;
+    color: #333333;
+    padding: 5px;
 }
 
 /* Image Panels */

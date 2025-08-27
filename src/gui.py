@@ -3,12 +3,12 @@ import os
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QLabel, QPushButton,
                              QVBoxLayout, QWidget, QFileDialog, QHBoxLayout,
                              QSlider, QDoubleSpinBox, QFrame, QRubberBand,
-                             QProgressDialog, QLineEdit, QGroupBox, QGridLayout, QSizePolicy, QMessageBox, QDialog, QScrollArea, QStyle, QSplitter)
+                             QProgressDialog, QLineEdit, QGroupBox, QGridLayout, QSizePolicy, QMessageBox, QDialog, QScrollArea, QStyle, QSplitter, QComboBox)
 from PyQt6.QtGui import QPixmap, QIcon, QFont, QFont
 from PyQt6.QtCore import Qt, QRect, QPoint, QSize, pyqtSignal
 from PIL import Image, ImageDraw
 from PIL.ImageQt import ImageQt
-from main import mark_dark_particles_adaptive
+from main import mark_dark_particles_adaptive, mark_dark_particles_gradient, mark_particles_with_clustering
 
 class ScaledPixmapLabel(QLabel):
     """
@@ -86,6 +86,9 @@ class ImageSelectionLabel(ScaledPixmapLabel):
         super().__init__(*args, **kwargs)
         self.rubber_band = QRubberBand(QRubberBand.Shape.Rectangle, self)
         self.selection_origin = QPoint()
+        self.is_moving_selection = False
+        self.move_offset = QPoint()
+        self.setMouseTracking(True) # 允许在没有按下鼠标按钮的情况下跟踪鼠标移动
 
     def mousePressEvent(self, event):
         """
@@ -95,9 +98,14 @@ class ImageSelectionLabel(ScaledPixmapLabel):
             event (QMouseEvent): 鼠标事件。
         """
         if event.button() == Qt.MouseButton.LeftButton and not self.unscaled_pixmap().isNull():
-            self.selection_origin = event.pos()
-            self.rubber_band.setGeometry(QRect(self.selection_origin, QSize()))
-            self.rubber_band.show()
+            if self.rubber_band.isVisible() and self.rubber_band.geometry().contains(event.pos()):
+                self.is_moving_selection = True
+                self.move_offset = event.pos() - self.rubber_band.pos()
+            else:
+                self.is_moving_selection = False
+                self.selection_origin = event.pos()
+                self.rubber_band.setGeometry(QRect(self.selection_origin, QSize()))
+                self.rubber_band.show()
 
     def mouseMoveEvent(self, event):
         """
@@ -106,8 +114,19 @@ class ImageSelectionLabel(ScaledPixmapLabel):
         Args:
             event (QMouseEvent): 鼠标事件。
         """
-        if not self.selection_origin.isNull() and not self.unscaled_pixmap().isNull():
-            self.rubber_band.setGeometry(QRect(self.selection_origin, event.pos()).normalized())
+        # 仅在按下左键时移动或调整大小
+        if event.buttons() == Qt.MouseButton.LeftButton:
+            if self.is_moving_selection:
+                new_pos = event.pos() - self.move_offset
+                self.rubber_band.move(new_pos)
+            elif not self.selection_origin.isNull() and not self.unscaled_pixmap().isNull():
+                self.rubber_band.setGeometry(QRect(self.selection_origin, event.pos()).normalized())
+
+        # 无论是否按下按钮，都根据悬停位置更新光标形状
+        if self.rubber_band.isVisible() and self.rubber_band.geometry().contains(event.pos()):
+            self.setCursor(Qt.CursorShape.SizeAllCursor)
+        else:
+            self.setCursor(Qt.CursorShape.CrossCursor)
 
     def mouseReleaseEvent(self, event):
         """
@@ -117,7 +136,16 @@ class ImageSelectionLabel(ScaledPixmapLabel):
             event (QMouseEvent): 鼠标事件。
         """
         if event.button() == Qt.MouseButton.LeftButton and not self.unscaled_pixmap().isNull():
-            self.rubber_band.hide()
+            if self.is_moving_selection:
+                self.is_moving_selection = False
+            else:
+                self.rubber_band.hide() # 仅在创建新选区时隐藏
+            
+            if self.rubber_band.width() < 5 or self.rubber_band.height() < 5:
+                self.rubber_band.hide()
+            else:
+                self.rubber_band.show()
+
             self.selection_changed.emit()
 
     def get_selection(self):
@@ -180,6 +208,13 @@ class MainWindow(QMainWindow):
         self.help_button = QPushButton("Help")
         self.help_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxQuestion))
         self.help_button.clicked.connect(self.show_help)
+
+        # --- 模式选择下拉菜单 ---
+        self.mode_label = QLabel("Processing Mode:")
+        self.mode_combo = QComboBox()
+        self.mode_combo.addItems(["Standard", "Gradient", "Clustering"])
+        self.mode_combo.setToolTip("Select the particle marking mode.")
+        self.mode_combo.currentTextChanged.connect(self.on_mode_changed)
 
         # 为按钮设置对象名以便在QSS中应用特定样式
         self.load_button.setObjectName("iconButton")
@@ -298,6 +333,43 @@ class MainWindow(QMainWindow):
         size_params_layout.addWidget(self.max_size_slider, 1, 1)
         size_params_layout.addWidget(self.max_size_spinbox, 1, 2)
 
+        # --- 聚类参数区域 ---
+        self.cluster_params_group = QGroupBox("Clustering Parameters")
+        cluster_params_layout = QGridLayout(self.cluster_params_group)
+        self.cluster_eps_label = QLabel("Cluster EPS:")
+        self.cluster_eps_label.setToolTip("DBSCAN聚类中两个样本被视为邻居的最大距离。")
+        self.cluster_eps_slider = QSlider(Qt.Orientation.Horizontal)
+        self.cluster_eps_slider.setRange(1, 200)
+        self.cluster_eps_slider.setValue(50)
+        self.cluster_eps_spinbox = QDoubleSpinBox()
+        self.cluster_eps_spinbox.setRange(1, 500)
+        self.cluster_eps_spinbox.setSingleStep(1)
+        self.cluster_eps_spinbox.setValue(50)
+        self.cluster_eps_slider.valueChanged.connect(self.cluster_eps_spinbox.setValue)
+        self.cluster_eps_spinbox.valueChanged.connect(lambda val: self.cluster_eps_slider.setValue(int(val)))
+        self.cluster_eps_spinbox.valueChanged.connect(self.process_image)
+
+        self.cluster_min_samples_label = QLabel("Min Samples:")
+        self.cluster_min_samples_label.setToolTip("DBSCAN聚类中一个点被视为核心点的邻域中的样本数。")
+        self.cluster_min_samples_slider = QSlider(Qt.Orientation.Horizontal)
+        self.cluster_min_samples_slider.setRange(1, 20)
+        self.cluster_min_samples_slider.setValue(5)
+        self.cluster_min_samples_spinbox = QDoubleSpinBox()
+        self.cluster_min_samples_spinbox.setRange(1, 50)
+        self.cluster_min_samples_spinbox.setSingleStep(1)
+        self.cluster_min_samples_spinbox.setValue(5)
+        self.cluster_min_samples_slider.valueChanged.connect(self.cluster_min_samples_spinbox.setValue)
+        self.cluster_min_samples_spinbox.valueChanged.connect(lambda val: self.cluster_min_samples_slider.setValue(int(val)))
+        self.cluster_min_samples_spinbox.valueChanged.connect(self.process_image)
+
+        cluster_params_layout.addWidget(self.cluster_eps_label, 0, 0)
+        cluster_params_layout.addWidget(self.cluster_eps_slider, 0, 1)
+        cluster_params_layout.addWidget(self.cluster_eps_spinbox, 0, 2)
+        cluster_params_layout.addWidget(self.cluster_min_samples_label, 1, 0)
+        cluster_params_layout.addWidget(self.cluster_min_samples_slider, 1, 1)
+        cluster_params_layout.addWidget(self.cluster_min_samples_spinbox, 1, 2)
+        self.cluster_params_group.setVisible(False) # 默认隐藏
+
         # --- 批量处理区域 ---
         batch_group = QGroupBox("Batch Processing")
         batch_main_layout = QVBoxLayout(batch_group)
@@ -331,6 +403,10 @@ class MainWindow(QMainWindow):
         image_container = QWidget()
         image_layout = QVBoxLayout(image_container)
         
+        self.workspace_title_label = QLabel("Work Space")
+        self.workspace_title_label.setObjectName("workspaceTitle")
+        self.workspace_title_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        
         image_panels_layout = QHBoxLayout()
         image_panels_layout.addWidget(self.original_image_label, 1)
         image_panels_layout.addWidget(self.processed_image_label, 1)
@@ -360,6 +436,7 @@ class MainWindow(QMainWindow):
         footer_layout.addWidget(email_label)
         footer_layout.addStretch(1)
 
+        image_layout.addWidget(self.workspace_title_label)
         image_layout.addLayout(image_panels_layout)
         image_layout.addWidget(self.result_label)
         image_layout.addLayout(footer_layout)
@@ -376,9 +453,15 @@ class MainWindow(QMainWindow):
         top_buttons_layout.addWidget(self.help_button, 1, 0)
         top_buttons_layout.addWidget(self.theme_button, 1, 1)
         
+        mode_layout = QHBoxLayout()
+        mode_layout.addWidget(self.mode_label)
+        mode_layout.addWidget(self.mode_combo)
+        top_buttons_layout.addLayout(mode_layout, 1, 2)
+        
         control_panel_layout.addLayout(top_buttons_layout)
         control_panel_layout.addWidget(params_group)
         control_panel_layout.addWidget(size_params_group)
+        control_panel_layout.addWidget(self.cluster_params_group)
         control_panel_layout.addWidget(batch_group)
         control_panel_layout.addStretch() # 将所有控件推到顶部
 
@@ -427,6 +510,14 @@ class MainWindow(QMainWindow):
             QApplication.instance().setStyleSheet(self.dark_style)
         self.is_dark_theme = not self.is_dark_theme
 
+    def on_mode_changed(self, mode):
+        """
+        当处理模式改变时调用。
+        """
+        is_clustering = (mode == "Clustering")
+        self.cluster_params_group.setVisible(is_clustering)
+        self.process_image()
+
     def select_output_directory(self):
         """
         打开一个对话框，让用户选择批量处理结果的输出目录。
@@ -455,6 +546,12 @@ class MainWindow(QMainWindow):
         border_width = int(self.border_spinbox.value())
         min_size = int(self.min_size_spinbox.value())
         max_size = int(self.max_size_spinbox.value()) if self.max_size_spinbox.value() > 0 else None
+        
+        # 获取聚类参数
+        cluster_eps = int(self.cluster_eps_spinbox.value())
+        cluster_min_samples = int(self.cluster_min_samples_spinbox.value())
+        
+        current_mode = self.mode_combo.currentText()
 
         # 创建并显示进度条
         progress = QProgressDialog("正在处理图片...", "取消", 0, len(file_paths), self)
@@ -472,17 +569,26 @@ class MainWindow(QMainWindow):
             output_path = os.path.join(output_dir, f"{name}_marked{ext}")
             
             try:
-                mark_dark_particles_adaptive(
-                    image_input=file_path,
-                    sensitivity_min=sensitivity_min,
-                    sensitivity_max=sensitivity_max,
-                    output_path=output_path,
-                    blur_radius=blur_radius,
-                    border_width=border_width,
-                    selection_box=self.last_selection_box,
-                    min_particle_size=min_size,
-                    max_particle_size=max_size
-                )
+                params = {
+                    "image_input": file_path,
+                    "sensitivity_min": sensitivity_min,
+                    "sensitivity_max": sensitivity_max,
+                    "output_path": output_path,
+                    "blur_radius": blur_radius,
+                    "border_width": border_width,
+                    "selection_box": self.last_selection_box,
+                    "min_particle_size": min_size,
+                    "max_particle_size": max_size,
+                }
+                if current_mode == "Standard":
+                    mark_dark_particles_adaptive(**params)
+                elif current_mode == "Gradient":
+                    mark_dark_particles_gradient(**params)
+                elif current_mode == "Clustering":
+                    params["cluster_eps"] = cluster_eps
+                    params["cluster_min_samples"] = cluster_min_samples
+                    mark_particles_with_clustering(**params)
+
             except Exception as e:
                 print(f"处理 {file_path} 时出错: {e}")
         
@@ -596,18 +702,33 @@ class MainWindow(QMainWindow):
             border_width = int(self.border_spinbox.value())
             min_size = int(self.min_size_spinbox.value())
             max_size = int(self.max_size_spinbox.value()) if self.max_size_spinbox.value() > 0 else None
+            
+            current_mode = self.mode_combo.currentText()
+            
+            params = {
+                "image_input": self.pil_image.copy(),
+                "sensitivity_min": sensitivity_min,
+                "sensitivity_max": sensitivity_max,
+                "output_path": 'output/gui_marked_result.png',
+                "blur_radius": blur_radius,
+                "border_width": border_width,
+                "selection_box": self.last_selection_box,
+                "min_particle_size": min_size,
+                "max_particle_size": max_size,
+            }
 
-            result_img, percentage, num_particles = mark_dark_particles_adaptive(
-                image_input=self.pil_image.copy(),
-                sensitivity_min=sensitivity_min,
-                sensitivity_max=sensitivity_max,
-                output_path='output/gui_marked_result.png',
-                blur_radius=blur_radius,
-                border_width=border_width,
-                selection_box=self.last_selection_box,
-                min_particle_size=min_size,
-                max_particle_size=max_size
-            )
+            if current_mode == "Standard":
+                result_img, percentage, num_particles = mark_dark_particles_adaptive(**params)
+                cluster_count = None
+            elif current_mode == "Gradient":
+                result_img, percentage, num_particles = mark_dark_particles_gradient(**params)
+                cluster_count = None
+            elif current_mode == "Clustering":
+                params["cluster_eps"] = int(self.cluster_eps_spinbox.value())
+                params["cluster_min_samples"] = int(self.cluster_min_samples_spinbox.value())
+                result_img, percentage, num_particles, cluster_count = mark_particles_with_clustering(**params)
+            else:
+                return # Should not happen
             
             original_with_box = self.pil_image.copy()
             draw = ImageDraw.Draw(original_with_box)
@@ -619,7 +740,11 @@ class MainWindow(QMainWindow):
             
             self.original_image_label.setPixmap(self.pil_to_pixmap(original_with_box))
             self.processed_image_label.setPixmap(self.pil_to_pixmap(result_img))
-            self.result_label.setText(f"Particle Percentage: {percentage:.2f}%  |  Particle Count: {num_particles}")
+            
+            result_text = f"Particle Percentage: {percentage:.2f}%  |  Particle Count: {num_particles}"
+            if cluster_count is not None:
+                result_text += f"  |  Cluster Count: {cluster_count}"
+            self.result_label.setText(result_text)
 
         finally:
             QApplication.restoreOverrideCursor()
