@@ -168,10 +168,11 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Dark Particle Analyzer - 深色粒子分析器")
         self.setGeometry(100, 100, 1600, 700)
-        self.setWindowIcon(QIcon("public\images\icon.svg"))
+        self.setWindowIcon(QIcon("public/images/icon.svg"))
 
         # 初始化图像显示区域
         self.original_image_label = ImageSelectionLabel()
+        
         self.original_image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.original_image_label.setFrameShape(QFrame.Shape.StyledPanel)
         self.original_image_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
